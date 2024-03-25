@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import client from '@/app/api/_clients/github'
 import { urlSearchParamsToObject } from "@api/utils"
+import { transform } from './transforms'
 
 import type { QPObj } from "@api/utils"
 
@@ -51,29 +52,29 @@ const handleOrgRepos = async (params: QPObj) => {
     const result = OrgRepoParams.safeParse(params)
 
     if (!result.success) {
-        return result.error
+        return { success: false, errors: result.error }
     }
 
     const repos = await client.rest.repos.listForOrg(result.data)
-    return repos.data
+    return { success: true, data: repos.data }
 }
 
 const handleUserRepos = async (params: QPObj) => {
     const result = UserRepoParams.safeParse(params)
 
     if (!result.success) {
-        return result.error
+        return { success: false, errors: result.error }
     }
 
     const repos = await client.rest.repos.listForUser(result.data)
-    return repos.data
+    return { success: true, data: repos.data }
 }
 
 const handleRepos = async (params: QPObj) => {
     const result = UserAndOrgRepoParams.safeParse(params)
 
     if (!result.success) {
-        return result.error
+        return { success: false, errors: result.error }
     }
 
     const userRepos = await handleUserRepos({
@@ -81,21 +82,21 @@ const handleRepos = async (params: QPObj) => {
         ...params
     })
     const orgRepos = await handleOrgRepos(params)
-    return [userRepos, orgRepos]
+    return { succes: true, data: [userRepos, orgRepos] }
 }
 
 const handleAuthdRepos = async (params: QPObj) => {
     const result = AuthUserRepoParams.safeParse(params)
 
     if (!result.success) {
-        return result.error
+        return { success: false, errors: result.error }
     }
 
     const repos = await client.rest.repos.listForAuthenticatedUser(result.data)
-    return repos.data
+    return { succes: true, data: repos.data }
 }
 
-
+export type Scope = 'org' | 'user' | 'me' | undefined
 /**
  * GET /api/repos route handler
  * 
@@ -124,17 +125,19 @@ export async function GET(req: NextRequest) {
     const params = urlSearchParamsToObject(qp)
 
     let result;
-    switch (params.scope) {
+    switch (params.scope as Scope) {
         case "org":
-            result = await handleOrgRepos(params)
+            const r = await handleOrgRepos(params)
+            if (r.success)
+                result = transform['org'](data)
             break;
         case "user":
-            result = await handleUserRepos(params)
+            const data = await handleUserRepos(params)
             break;
         case "me":
-            result = await handleAuthdRepos(params)
+            const data = await handleAuthdRepos(params)
         default:
-            result = await handleRepos(params)
+            const data = await handleRepos(params)
     }
 }
 
