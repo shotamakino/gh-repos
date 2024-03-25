@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server"
 import { z } from 'zod'
-import { wrap } from '@typeschema/zod'
 
-import client from '@api/clients/github'
+import client from '@/app/api/_clients/github'
 import { urlSearchParamsToObject } from "@api/utils"
 
 import type { QPObj } from "@api/utils"
@@ -17,6 +16,37 @@ const OrgRepoParams = z.object({
     direction: z.optional(z.enum(["asc", "desc"]))
 })
 
+const UserRepoParams = z.object({
+    username: z.string(),
+    page: z.optional(z.number()),
+    per_page: z.optional(z.number()),
+    type: z.optional(z.enum(["all", "member", "owner"])),
+    sort: z.optional(z.enum(["created", "updated", "pushed", "full_name"])),
+    direction: z.optional(z.enum(["asc", "desc"]))
+})
+
+// intersection of UserRepoParams and OrgRepoParams
+const UserAndOrgRepoParams = z.object({
+    name: z.string(),
+    page: z.optional(z.number()),
+    per_page: z.optional(z.number()),
+    type: z.optional(z.enum(['all', 'member'])),
+    sort: z.optional(z.enum(["created", "updated", "pushed", "full_name"])),
+    direction: z.optional(z.enum(["asc", "desc"]))
+})
+
+const AuthUserRepoParams = z.object({
+    visibility: z.optional(z.enum(["all", "public", "private"])),
+    affiliation: z.optional(z.enum(["owner", "collaborator", "organization_member"])),
+    page: z.optional(z.number()),
+    per_page: z.optional(z.number()),
+    type: z.optional(z.enum(["all", "public", "private", "member", "owner"])),
+    sort: z.optional(z.enum(["created", "updated", "pushed", "full_name"])),
+    direction: z.optional(z.enum(["asc", "desc"])),
+    since: z.optional(z.coerce.date().transform(val => val.toString())),
+    before: z.optional(z.coerce.date().transform(val => val.toString())),
+})
+
 const handleOrgRepos = async (params: QPObj) => {
     const result = OrgRepoParams.safeParse(params)
 
@@ -25,8 +55,46 @@ const handleOrgRepos = async (params: QPObj) => {
     }
 
     const repos = await client.rest.repos.listForOrg(result.data)
-    return repos
+    return repos.data
 }
+
+const handleUserRepos = async (params: QPObj) => {
+    const result = UserRepoParams.safeParse(params)
+
+    if (!result.success) {
+        return result.error
+    }
+
+    const repos = await client.rest.repos.listForUser(result.data)
+    return repos.data
+}
+
+const handleRepos = async (params: QPObj) => {
+    const result = UserAndOrgRepoParams.safeParse(params)
+
+    if (!result.success) {
+        return result.error
+    }
+
+    const userRepos = await handleUserRepos({
+        username: result.data.name,
+        ...params
+    })
+    const orgRepos = await handleOrgRepos(params)
+    return [userRepos, orgRepos]
+}
+
+const handleAuthdRepos = async (params: QPObj) => {
+    const result = AuthUserRepoParams.safeParse(params)
+
+    if (!result.success) {
+        return result.error
+    }
+
+    const repos = await client.rest.repos.listForAuthenticatedUser(result.data)
+    return repos.data
+}
+
 
 /**
  * GET /api/repos route handler
@@ -59,6 +127,14 @@ export async function GET(req: NextRequest) {
     switch (params.scope) {
         case "org":
             result = await handleOrgRepos(params)
+            break;
+        case "user":
+            result = await handleUserRepos(params)
+            break;
+        case "me":
+            result = await handleAuthdRepos(params)
+        default:
+            result = await handleRepos(params)
     }
 }
 
