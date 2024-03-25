@@ -45,7 +45,6 @@ export default function useRepos({
         direction
     })
     const { data: result, ...rest } = useSWR(url, fetcher)
-    console.log(result, rest) // todo: cleanup
     return {
         repos: result?.data,
         ...rest

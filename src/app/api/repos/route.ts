@@ -8,66 +8,14 @@ import { transform } from './transforms'
 import type { QPObj } from "@api/utils"
 
 // Validation Schemas
-const OrgRepoParams = z.object({
-    org: z.string(),
-    page: z.optional(z.number()),
-    per_page: z.optional(z.number()),
-    type: z.optional(z.enum(["all", "public", "private", "forks", "sources", "member"])),
-    sort: z.optional(z.enum(["created", "updated", "pushed", "full_name"])),
-    direction: z.optional(z.enum(["asc", "desc"]))
-})
-
-const UserRepoParams = z.object({
-    username: z.string(),
-    page: z.optional(z.number()),
-    per_page: z.optional(z.number()),
-    type: z.optional(z.enum(["all", "member", "owner"])),
-    sort: z.optional(z.enum(["created", "updated", "pushed", "full_name"])),
-    direction: z.optional(z.enum(["asc", "desc"]))
-})
-
 // intersection of UserRepoParams and OrgRepoParams
 const UserAndOrgRepoParams = z.object({
     name: z.string(),
-    page: z.optional(z.number()),
-    per_page: z.optional(z.number()),
+    page: z.optional(z.coerce.number()),
+    per_page: z.optional(z.coerce.number()),
     sort: z.optional(z.enum(["stars", "updated", "forks", "help-wanted-issues"])),
     order: z.optional(z.enum(["asc", "desc"]))
 })
-
-const AuthUserRepoParams = z.object({
-    visibility: z.optional(z.enum(["all", "public", "private"])),
-    affiliation: z.optional(z.enum(["owner", "collaborator", "organization_member"])),
-    page: z.optional(z.number()),
-    per_page: z.optional(z.number()),
-    type: z.optional(z.enum(["all", "public", "private", "member", "owner"])),
-    sort: z.optional(z.enum(["created", "updated", "pushed", "full_name"])),
-    direction: z.optional(z.enum(["asc", "desc"])),
-    since: z.optional(z.coerce.date().transform(val => val.toString())),
-    before: z.optional(z.coerce.date().transform(val => val.toString())),
-})
-
-const handleOrgRepos = async (params: QPObj) => {
-    const result = OrgRepoParams.safeParse(params)
-
-    if (!result.success) {
-        return { success: false, errors: result.error }
-    }
-
-    const repos = await client.rest.repos.listForOrg(result.data)
-    return { success: true, data: repos.data }
-}
-
-const handleUserRepos = async (params: QPObj) => {
-    const result = UserRepoParams.safeParse(params)
-
-    if (!result.success) {
-        return { success: false, errors: result.error }
-    }
-
-    const repos = await client.rest.repos.listForUser(result.data)
-    return { success: true, data: repos.data }
-}
 
 const handleRepos = async (params: QPObj) => {
     const result = UserAndOrgRepoParams.safeParse(params)
@@ -83,21 +31,9 @@ const handleRepos = async (params: QPObj) => {
         ...result.data
     })
 
-    return { success: true, data: repos?.data?.items }
+    return { success: true, data: repos?.data?.items, pageInfo: repos?.data?.total_count  }
 }
 
-const handleAuthdRepos = async (params: QPObj) => {
-    const result = AuthUserRepoParams.safeParse(params)
-
-    if (!result.success) {
-        return { success: false, errors: result.error }
-    }
-
-    const repos = await client.rest.repos.listForAuthenticatedUser(result.data)
-    return { succes: true, data: repos.data }
-}
-
-export type Scope = 'org' | 'user' | 'me' | undefined
 /**
  * GET /api/repos route handler
  * 
@@ -125,11 +61,10 @@ export async function GET(req: NextRequest) {
     const qp = req.nextUrl.searchParams
     const params = urlSearchParamsToObject(qp)
 
-    const { success, data, errors } = await handleRepos(params)
+    const { success, data, errors, pageInfo } = await handleRepos(params)
     if (!success) {
         return Response.json({ errors }, { status: 400 })
     }
-    console.log(transform['default']((data || [])))
 
     return Response.json({
         data: transform['default'](data || [])
