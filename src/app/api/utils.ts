@@ -11,7 +11,11 @@ export const urlSearchParamsToObject = (qp: URLSearchParams) => {
             return acc
         }
 
-        acc[key] = qp.getAll(key)
+        const vals = qp.getAll(key)
+        if (vals.length === 1) { acc[key] = vals[0] }
+        else {
+            acc[key] = vals
+        }
         return acc
     }, {})
 }

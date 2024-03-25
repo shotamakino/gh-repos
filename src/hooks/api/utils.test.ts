@@ -19,4 +19,9 @@ describe('createAPIURL', () => {
         const today = (new Date()).toISOString()
         expect(createAPIURL('/me', { since: today })).toBe(`http://localhost:3000/api/me?since=${encodeQP(today)}`)
     })
+
+    test('handles undefined parameters', () => {
+        const C = null
+        expect(createAPIURL('/me', { A: 'value', B: undefined, C })).toBe(`http://localhost:3000/api/me?A=value`)
+    })
 })

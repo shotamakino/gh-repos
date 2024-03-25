@@ -31,9 +31,8 @@ const UserAndOrgRepoParams = z.object({
     name: z.string(),
     page: z.optional(z.number()),
     per_page: z.optional(z.number()),
-    type: z.optional(z.enum(['all', 'member'])),
-    sort: z.optional(z.enum(["created", "updated", "pushed", "full_name"])),
-    direction: z.optional(z.enum(["asc", "desc"]))
+    sort: z.optional(z.enum(["stars", "updated", "forks", "help-wanted-issues"])),
+    order: z.optional(z.enum(["asc", "desc"]))
 })
 
 const AuthUserRepoParams = z.object({
@@ -77,12 +76,14 @@ const handleRepos = async (params: QPObj) => {
         return { success: false, errors: result.error }
     }
 
-    const userRepos = await handleUserRepos({
-        username: result.data.name,
-        ...params
+    const q = `user:${result.data.name} org:${result.data.name}`
+
+    const repos = await client.rest.search.repos({
+        q,
+        ...result.data
     })
-    const orgRepos = await handleOrgRepos(params)
-    return { succes: true, data: [userRepos, orgRepos] }
+
+    return { success: true, data: repos?.data?.items }
 }
 
 const handleAuthdRepos = async (params: QPObj) => {
@@ -124,20 +125,14 @@ export async function GET(req: NextRequest) {
     const qp = req.nextUrl.searchParams
     const params = urlSearchParamsToObject(qp)
 
-    let result;
-    switch (params.scope as Scope) {
-        case "org":
-            const r = await handleOrgRepos(params)
-            if (r.success)
-                result = transform['org'](data)
-            break;
-        case "user":
-            const data = await handleUserRepos(params)
-            break;
-        case "me":
-            const data = await handleAuthdRepos(params)
-        default:
-            const data = await handleRepos(params)
+    const { success, data, errors } = await handleRepos(params)
+    if (!success) {
+        return Response.json({ errors }, { status: 400 })
     }
+    console.log(transform['default']((data || [])))
+
+    return Response.json({
+        data: transform['default'](data || [])
+    })
 }
 

@@ -39,7 +39,7 @@ export const encodeQP = (qp: string) => {
  */
 export const fetcher = (...args: FetchParams) => fetch(...args).then(res => res.json())
 
-export type QueryParams = Record<string, string | string[] | number | number[]>
+export type QueryParams = Record<string, string | string[] | number | number[] | undefined | null>
 
 /**
  * Helper for constructing arbitrary URLs with parameters.
@@ -56,6 +56,7 @@ export const createURL = (baseURL: URL, relative: string = '') => (params: Query
     const url = new URL(relative, baseURL)
 
     url.search = Object.entries(params).map(([key, val]) => {
+        if (val === undefined || val === null) return // end early for undefined and null
         if (Array.isArray(val)) {
             return val.map(v => {
                 `${encodeQP(key)}=${encodeQP(v.toString())}`
@@ -63,7 +64,7 @@ export const createURL = (baseURL: URL, relative: string = '') => (params: Query
         } else {
             return `${encodeQP(key)}=${encodeQP(val.toString())}`
         }
-    }).join('&')
+    }).filter(qp => !!qp).join('&')
 
     return url.href
 }
