@@ -21,7 +21,7 @@ export default function DateCell(props: DateCellProps) {
   return (
     <div className="flex-col space-y-2 text-xs">
       <div>{date}</div>
-      {time ? <div>{time}</div> : null}
+      {time ? <div className="text-slate-300">{time}</div> : null}
     </div>
   );
 }

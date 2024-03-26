@@ -39,7 +39,7 @@ export const encodeQP = (qp: string) => {
  */
 export const fetcher = (...args: FetchParams) => fetch(...args).then(res => res.json())
 
-export type QueryParams = Record<string, string | string[] | number | number[] | undefined | null>
+export type QueryParams = Record<string, string | string[] | number | number[] | boolean | undefined | null>
 
 /**
  * Helper for constructing arbitrary URLs with parameters.

@@ -7,14 +7,43 @@ import { transform } from './transforms'
 
 import type { QPObj } from "@api/utils"
 
-// Validation Schemas
-// intersection of UserRepoParams and OrgRepoParams
+const buildGitHubQuery = (params: z.infer<typeof UserAndOrgRepoParams>) => {
+    const q = `user:${params.name} org:${params.name}`
+
+    return Object.entries(params).reduce((acc, [key, val]) => {
+        switch (key) {
+            case 'textIn': 
+                const searchVal = params['text']
+                // we know val here will be a string
+                // because of validation
+                acc = `${searchVal} in:${(val as string).toLowerCase()}` + acc 
+                break
+            case 'archived':
+                acc = acc + `archived:${val}`
+                break
+            case 'language':
+                acc = acc + `language:${val}`
+                break
+        }
+        return acc
+    }, q)
+}
+
 const UserAndOrgRepoParams = z.object({
-    name: z.string(),
+    name: z.string().trim(),
+    textIn: z.optional(z.enum(['name', 'description', 'topics', 'readme'])),
+    text: z.optional(z.string()),
+    language: z.optional(z.string()),
+    archived: z.optional(z.coerce.boolean()),
     page: z.optional(z.coerce.number()),
     per_page: z.optional(z.coerce.number()),
     sort: z.optional(z.enum(["stars", "updated", "forks", "help-wanted-issues"])),
     order: z.optional(z.enum(["asc", "desc"]))
+}).refine(input => {
+    // requires text if textIn is defined and vice versa 
+    if (input.textIn === undefined && input.text !== undefined) return false
+    if (input.textIn !== undefined && input.text === undefined) return false
+    return true
 })
 
 const handleRepos = async (params: QPObj) => {
@@ -24,50 +53,35 @@ const handleRepos = async (params: QPObj) => {
         return { success: false, errors: result.error }
     }
 
-    const q = `user:${result.data.name} org:${result.data.name}`
+    const q = buildGitHubQuery(result.data)
+
+    const { name: _, ...rest } = result.data
 
     const repos = await client.rest.search.repos({
         q,
-        ...result.data
+        ...rest
     })
 
-    return { success: true, data: repos?.data?.items, pageInfo: repos?.data?.total_count  }
+    console.log(repos)
+
+    return { success: true, data: repos?.data?.items, totalCount: repos?.data?.total_count  }
 }
 
 /**
  * GET /api/repos route handler
- * 
- * Utilizes the following API endpoints from GitHub REST API:
- * - `GET /user/repos`
- * - `GET /users/{username}/repos`
- * - `GET /orgs/{org}/repos`
- * The `username` and `org` scoped endpoints have the following
- * query parameters available: 
- * - `type` = 'all' | 'owner' | 'public' | 'private' | 'member' 
- * - `sort` = 'created' | 'updated' | 'pushed' | 'full_name'
- * - `direction` = 'asc' | 'desc'
- * - `per_page`
- * - `page`
- *   Whereas the authenticated user scoped endpoint
- *   additionally has:
- * - `visibility`
- * - `affiliation`
- * - `since`
- * - `before`
- * We also add custom flags in the query params to distinguish
- * between org repos from user repos queries
  */
 export async function GET(req: NextRequest) {
     const qp = req.nextUrl.searchParams
     const params = urlSearchParamsToObject(qp)
 
-    const { success, data, errors, pageInfo } = await handleRepos(params)
+    const { success, data, errors, totalCount } = await handleRepos(params)
     if (!success) {
         return Response.json({ errors }, { status: 400 })
     }
 
     return Response.json({
-        data: transform['default'](data || [])
+        data: transform['default'](data || []),
+        totalCount
     })
 }
 
