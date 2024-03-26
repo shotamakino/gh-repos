@@ -54,7 +54,7 @@ export default function useRepos({
     sort,
     order,
   });
-  console.log(url);
+
   const { data: result, ...rest } = useSWR(!!name ? url : null, fetcher);
   return {
     repos: result?.data,

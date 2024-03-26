@@ -29,7 +29,6 @@ const sortingToQueryString = (
 
 export default function ReposTableData() {
   const { filters } = useFilterForm();
-  console.log(filters);
 
   const [data, setData] = useState<Repos[]>([]);
   const [pagination, setPagination] = useState<PaginationState>({

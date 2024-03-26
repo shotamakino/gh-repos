@@ -62,8 +62,6 @@ const handleRepos = async (params: QPObj) => {
         ...rest
     })
 
-    console.log(repos)
-
     return { success: true, data: repos?.data?.items, totalCount: repos?.data?.total_count  }
 }
 
