@@ -23,6 +23,9 @@
 1. Copy the generated access token and paste it into the `.env.local`
    you created in *step 1*.
 1. Run `pnpm install` and then `pnpm dev` in the root of the repository.
+1. Once the app builds, go to `localhost:3000` in your browser
+1. On the top right side, you can click on the text input to
+   search for some repositories. Cheers!
 
 ## Notes
 I defined an API for better shaping the frontend to take a
