@@ -27,17 +27,6 @@
 1. On the top right side, you can click on the text input to
    search for some repositories. Cheers!
 
-## Notes
-I defined an API for better shaping the frontend to take a
-single input and return the results uniformly. This led to
-some constraints in design choices.
-
-Because of turning 3 GitHub REST APIs into 1 endpoint for
-our API  and has been coded so that it can be
-refactored into separate API resources. You may encounter
-some redundancies, but those redundancies are there to save
-time in the future to act as an adapter between GitHub's API
-with ours.
 
 ## Todos (if I had more time)
 - Make a mock of GitHub api to use for testing
