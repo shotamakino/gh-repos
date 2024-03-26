@@ -1,5 +1,6 @@
 ## Getting Started
 
+1. Clone the repository to your local machine.
 1. Copy the env.local and rename to .env.local 
    ```bash
    cp env.local .env.local
@@ -21,7 +22,7 @@
    10. Leave all other options as-is and click **Generate token** at the bottom of the form.
 1. Copy the generated access token and paste it into the `.env.local`
    you created in *step 1*.
-1. Run `pnpm install` and then `pnpm dev`
+1. Run `pnpm install` and then `pnpm dev` in the root of the repository.
 
 ## Notes
 I defined an API for better shaping the frontend to take a
